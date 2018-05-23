@@ -1,0 +1,76 @@
+[*]
+[*] GTKWave Analyzer v3.3.66 (w)1999-2015 BSI
+[*] Wed May 23 17:39:58 2018
+[*]
+[dumpfile] "/home/bcc/gase16/cmips/cMIPS/cMIPS.vcd"
+[dumpfile_mtime] "Wed May 23 17:37:49 2018"
+[dumpfile_size] 393997192
+[savefile] "/home/bcc/gase16/cmips/cMIPS/rxtest.sav"
+[timestart] 0
+[size] 1918 1027
+[pos] -1 -1
+*-32.000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] u_simple_uart.
+[treeopen] u_simple_uart.u_uart.
+[sst_width] 196
+[signals_width] 249
+[sst_expanded] 1
+[sst_vpaned_height] 298
+@200
+-VELOCIDADE
+@28
+u_uart_remota.bit_rt[2:0]
+@200
+-
+-
+-
+@28
+[color] 3
+u_simple_uart.u_uart.u_receive.clk
+@200
+-UART LOCAL
+@28
+[color] 3
+u_simple_uart.u_uart.rxclk
+u_simple_uart.u_uart.rx_done
+u_simple_uart.u_uart.interr_rx_full
+@200
+-
+@22
+u_simple_uart.u_uart.rxcpu_dbg_st
+u_simple_uart.u_uart.rx_dbg_st
+@200
+-
+@28
+[color] 2
+u_simple_uart.u_uart.rx_int_set
+[color] 2
+u_simple_uart.u_uart.rxdat
+@820
+[color] 2
+u_simple_uart.u_uart.rxreg[7:0]
+@22
+[color] 2
+u_simple_uart.u_uart.received[7:0]
+@200
+-
+-
+-
+-UART REMOTA
+@28
+[color] 3
+u_uart_remota.tx_clk
+u_uart_remota.tx_run
+@200
+-
+@22
+u_uart_remota.tx_dbg_st
+@200
+-
+@28
+[color] 2
+u_uart_remota.start
+[color] 2
+u_uart_remota.outdat
+[pattern_trace] 1
+[pattern_trace] 0

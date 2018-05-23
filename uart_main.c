@@ -11,18 +11,26 @@ char Getc(void);
 void Putc(char);
 
 
-//char alinhamento[1][21];
-
 int main(void){
   volatile Tserial *uart;
   Tstatus stat;
+  Tcontrol ctrl;
+  Tinterr interr;
+  
   extern UARTdriver Ud;
   volatile UARTdriver *Ud_ptr;
-  Tcontrol ctrl;
-  char c;
 
+  char filaENTR[40]; int f_ent_hd, f_ent_tl;
+  char filaSAIDA[40]; int f_said_hd, f_said_tl;
+
+  f_ent_hd = 0;
+  f_said_hd = 0;
+  f_ent_tl = -1;
+  f_said_tl = -1;
+
+  
   uart = (void *)IO_UART_ADDR; // o endereço base da UART
-  Ud_ptr = &Ud;
+  Ud_ptr = &Ud; // passa o endereço da variável Ud para o ponteiro
   
   ctrl.rts   = 0;
   ctrl.speed = SPEED;
@@ -34,7 +42,7 @@ int main(void){
   Ud_ptr->tx_hd = 0;
   Ud_ptr->tx_tl = 0;
   Ud_ptr->nrx = 0;
-  Ud_ptr->ntx = 0;
+  Ud_ptr->ntx = 16;
   
   uart->interr.i = UART_INT_progRX; // interrupção de recepção apenas
   
@@ -44,14 +52,24 @@ int main(void){
   
   do {
     while ( (proberx()) == 0 ){};  // checo se existe algum caractere na fila de receção 
-      //delay_cycle(1);                       // nothing new, wait
+    //delay_cycle(1);                       // pro compilador não otimizar nada
 
     c = Getc();  // recebo um caractere da fila
     
-    if (c != EOT)
-      to_stdout( c ); // imprime o caractere
-    else
-      to_stdout( '\n' ); // imprime newline
+    if (c != EOT){
+      
+      f_ent_tl = (f_ent_tl + 1) % 40;
+      filaENTR[f_ent_tl] = c;
+
+      //to_stdout(c); // imprime o caractere
+    }
+
+    if((probetx()) == 16){
+      stat = iostat();
+      if(stat.txEmpty == 1){
+	uart->interr = uart->interr | /////////////////////////////////////////////////////////////// 
+      }
+    }
 
   } while (c != EOT); // vai até achar EOT
 
@@ -60,29 +78,24 @@ int main(void){
   exit(0);
 }
 
-//int main (void) {
-//
-//  extern UD;
-//
-//  laço com Getc() para receber todas as strings e guardar na filaEntr[]
-//
-//       se há string completa em filaEntr[]
-//
-//       alinha a string e insere em filaSai[]
-//
-//    laço com Putc() para esvaziar filaSai[];
-//
-//  delay_cycle(200);  // espera até esvaziar a fila do handler;
-//
-//  exit(0);
-//
-//}
-//
-//Putc(char c) {
-//  ...
-//}
-//
-char Getc() {
+
+/*void Putc(char c){
+  extern UARTdriver Ud;
+  volatile UARTdriver *Ud_ptr;  
+  
+  Ud_ptr = &Ud;
+
+  disableInterr();
+  
+  Ud_ptr->ntx -= 1;
+  Ud_ptr->tx_tl = (Ud_ptr->tx_tl - 1) % Q_SZ;
+  Ud_ptr->tx_q[Ud_ptr->tx_tl] = c;
+  
+  enableInterr();
+
+}*/
+
+char Getc(){
   extern UARTdriver Ud;
   volatile UARTdriver *Ud_ptr;
   char c;
@@ -93,14 +106,14 @@ char Getc() {
 
   Ud_ptr->nrx -= 1;
   c = Ud_ptr->rx_q[Ud_ptr->rx_hd];
-  Ud_ptr->rx_hd = (Ud_ptr->rx_hd + 1) & (Q_SZ - 1);
+  Ud_ptr->rx_hd = (Ud_ptr->rx_hd + 1) % Q_SZ; // +1 ou -1?
 
   enableInterr();
 
   return c;
 }
 
-void ioctl (Tcontrol ctrl) {
+void ioctl(Tcontrol ctrl){
   volatile Tserial *uart;
   uart = (void *)IO_UART_ADDR; // o endereço base da UART
 
@@ -109,7 +122,7 @@ void ioctl (Tcontrol ctrl) {
   uart->ctl  = ctrl;
 }
 
-Tstatus iostat() {
+Tstatus iostat(){
   volatile Tserial *uart;
   Tstatus status;
   
@@ -119,7 +132,7 @@ Tstatus iostat() {
   return(status);
 }
 
-int proberx() {
+int proberx(){
   extern UARTdriver Ud;
   volatile UARTdriver *Ud_ptr;
 
@@ -128,7 +141,7 @@ int proberx() {
   return( Ud_ptr->nrx );
 }
 
-int probetx() {
+int probetx(){
   extern UARTdriver Ud;
   volatile UARTdriver *Ud_ptr;
 
@@ -157,3 +170,23 @@ int probetx() {
     exit(0);
 
 }*/
+
+
+//int main (void) {
+//
+//  extern UD;
+//
+//  laço com Getc() para receber todas as strings e guardar na filaEntr[]
+//
+//       se há string completa em filaEntr[]
+//
+//       alinha a string e insere em filaSai[]
+//
+//    laço com Putc() para esvaziar filaSai[];
+//
+//  delay_cycle(200);  // espera até esvaziar a fila do handler;
+//
+//  exit(0);
+//
+//}
+//

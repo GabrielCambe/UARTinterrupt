@@ -1,0 +1,1 @@
+compile.sh -v uart_main.c; mv prog.bin data.bin ..; cd ..; run.sh -w -v rxtest.sav
