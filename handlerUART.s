@@ -27,8 +27,8 @@
         sw $a1, 4*4($k0)
         sw $a2, 5*4($k0)
         sw $a3, 6*4($k0)
-        #sw $v0, 7*4($k0)
-        #sw $v1, 8*4($k0)
+        sw $v0, 7*4($k0)
+        sw $v1, 8*4($k0)
 
 	# salva o endereço da UART
 	lui	$k1, %hi(HW_uart_addr)
@@ -125,6 +125,16 @@ UARTtra:
         nop
 
 
+        #lui $a1, %hi(tx_has_started)
+        #nop
+        #ori $a1, $a1, %lo(tx_has_started)
+        #nop
+        #lw $a2, 0($a1)
+        #nop
+        #bne $a2, $zero, ELSE
+
+#ELSE:
+
         lw $a1, TXHD($a0) # calculando o valor do endreço do elemento
         nop
         addu $a1, $a1, $a0
@@ -142,6 +152,7 @@ UARTtra:
         andi  $a3, $a3, (Q_SZ - 1)
         nop
         sw    $a3, TXHD($a0)
+        nop
 
 	j     _return	
         nop
@@ -155,8 +166,8 @@ _return:
         lw $a1, 4*4($k0)
         lw $a2, 5*4($k0)
         lw $a3, 6*4($k0)
-        #lw $v0, 7*4($k0)
-        #lw $v1, 8*4($k0)
+        lw $v0, 7*4($k0)
+        lw $v1, 8*4($k0)
 	
 
 	eret			    # Return from interrupt

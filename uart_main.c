@@ -1,7 +1,7 @@
 #include "cMIPS.h"
 #include "uart_defs.h"
 
-#define QUEUE_SIZE 210
+#define QUEUE_SIZE 420
 #define SPEED 3
 
 Tstatus iostat(void);
@@ -14,7 +14,7 @@ void alinha(char *str);
 
 
 int main(void){
-  
+  extern int tx_has_started;
   extern UARTdriver Ud;
   volatile UARTdriver *Ud_ptr;
 
@@ -26,11 +26,13 @@ int main(void){
   char filaENTR[QUEUE_SIZE]; int f_ent_tl;
   char filaSAIDA[QUEUE_SIZE]; int f_said_hd, f_said_tl, n_said;
 
-  char c; int i, newline;
+  char c; int i, j, newline;
 
   uart = (void *)IO_UART_ADDR; // o endereço base da UART
   Ud_ptr = &Ud; // passa o endereço da variável Ud para o ponteiro
-   
+
+  tx_has_started = 0;
+  
   ctrl.rts   = 0;
   ctrl.speed = SPEED;
   ioctl(ctrl); // inicializa UART
@@ -44,7 +46,7 @@ int main(void){
   Ud_ptr->ntx = 16;
 
  
-  uart->interr.i = UART_INT_progRX;// ativa interrupções de recepção
+  uart->interr.i = (UART_INT_progRX | UART_INT_progTX);// ativa interrupções de recepção
   ctrl.rts   = 1;
   ctrl.speed = SPEED;
   ioctl(ctrl); // sinaliza a UART que o programa irá transmitir
@@ -59,84 +61,66 @@ int main(void){
   do {
     while ( (proberx()) == 0 ){ // existe algum caractere na fila de RX? 
       delay_cycle(1);
-    }    
-    c = Getc(); // leio um caractere da fila de RX
-    //to_stdout( c );
+    }
     
+    c = Getc(); // leio um caractere da fila de RX
+    
+    if(f_ent_tl < 0){  /* ATUALIZO A FILA E ALINHO A STRING À DIREITA */
+      f_ent_tl = 0; //atualiza fila de entrada
+      filaENTR[f_ent_tl] = c;
+    }else{
+      f_ent_tl += 1; //atualiza fila de entrada
+      filaENTR[f_ent_tl] = c;
+    }
+        
     if(c == '\n'){
       if(newline == 1){ //são 2 newlines seguidos		
 	c = EOT;
 	continue;
       }else{ // newline != 1
 	/* RECEBI UM '\n', ISSO QUER DIZER QUE TEM UMA STRING COMPLETA */
+	newline = 1;
 
-
-	if(f_ent_tl >= 0){  /* ATUALIZO A FILA E ALINHO A STRING À DIREITA */
-	  newline = 1;
-	  f_ent_tl += 1; //atualiza fila de entrada
-	  filaENTR[f_ent_tl] = c;
-	}else{
-	  newline = 1;
-	  f_ent_tl = 0; //atualiza fila de entrada
-	  filaENTR[f_ent_tl] = c;
-	}
-
-	 alinha(filaENTR); //alinha a STRING recebida da fila de entrada.
-
+	alinha(filaENTR); //alinha a STRING recebida da fila de entrada.
 
 	if(f_said_tl < 0){ /* copiando a STRING alinhada para a fila de saída. */ 
-
 	  i = 0;
 	  while(i <= 20){
 	    filaSAIDA[i] = filaENTR[i];
-	    //to_stdout( filaSAIDA[i] );////////////////////////////////
 	    i += 1;
 	  }
 	  f_said_tl = 20;
 	  n_said = 21;
-	  f_ent_tl = -1;
 	}else{
-	  
-	  f_said_tl += 1;	
-	  i = 0; 
+	  f_said_tl += 1;	 
+	  i = 0;
+	  j = f_said_tl;
 	  while(i <= 20){
-	    filaSAIDA[(f_said_tl + i)] = filaENTR[i];
-	    //to_stdout( filaSAIDA[f_said_tl + i] );////////////////////////////////
+	    filaSAIDA[j] = filaENTR[i];
 	    i += 1;
+	    j += 1;
 	  }
 	  f_said_tl += 20;
-	  n_said += 21;
-	  f_ent_tl = -1; 
+	  n_said += 21; 
 	}
+	f_ent_tl = -1;
       }
-      
     }else{ // c != '\n'
-      if(f_ent_tl >= 0){  /* ATUALIZO A FILA E ALINHO ELA À DIREITA */
-	newline = 0;
-	f_ent_tl += 1; //atualiza fila de entrada
-	filaENTR[f_ent_tl] = c;
-      }else{
-	newline = 0;
-	f_ent_tl = 0; //atualiza fila de entrada
-	filaENTR[f_ent_tl] = c;  
-      }
-      
+      newline = 0;
     }
-
-    //if((probetx()) > 0){
-      if(f_said_hd < 0){ // insere octeto na fila de TRANSMISSÃO
-	f_said_hd = 0;
-	Putc( filaSAIDA[f_said_hd] );
-	//to_stdout( filaSAIDA[f_said_hd] );//////////////////////////////////////////////////////  
-	f_said_hd = (f_said_hd + 1) % QUEUE_SIZE;
-	n_said -= 1;
-      }else{
-	Putc( filaSAIDA[f_said_hd] );
-	//to_stdout( filaSAIDA[f_said_hd] );////////////////////////////////////////////////////
-	f_said_hd = (f_said_hd + 1) % QUEUE_SIZE;
-	n_said -= 1;
-      }    
-      // }
+    
+    
+    if(f_said_hd < 0){ // insere octeto na fila de TRANSMISSÃO
+      f_said_hd = 0;
+      Putc( filaSAIDA[f_said_hd] );
+      f_said_hd = f_said_hd + 1;
+      n_said -= 1;
+    }else{
+      Putc( filaSAIDA[f_said_hd] );
+      f_said_hd = f_said_hd + 1;
+      n_said -= 1;
+    }    
+    
     
   }while (c != EOT); // vai até achar EOT
 
@@ -144,13 +128,11 @@ int main(void){
     if(f_said_hd < 0){ // insere octeto na fila de TRANSMISSÃO
       f_said_hd = 0;
       Putc( filaSAIDA[f_said_hd] );
-      //to_stdout( filaSAIDA[f_said_hd] );//////////////////////////////////////////////////////  
-      f_said_hd = (f_said_hd + 1) % QUEUE_SIZE;
+      f_said_hd = f_said_hd + 1;
       n_said -= 1;
     }else{
       Putc( filaSAIDA[f_said_hd] );
-      //to_stdout( filaSAIDA[f_said_hd] );////////////////////////////////////////////////////
-      f_said_hd = (f_said_hd + 1) % QUEUE_SIZE;
+      f_said_hd = f_said_hd + 1;
       n_said -= 1;
     }
   }
@@ -158,8 +140,6 @@ int main(void){
   delay_cycle(200);
   exit(0);
 }
-
-
 
 
 void ioctl(Tcontrol ctrl){
@@ -171,6 +151,7 @@ void ioctl(Tcontrol ctrl){
   uart->ctl  = ctrl;
 }
 
+
 Tstatus iostat(){
   volatile Tserial *uart;
   Tstatus status;
@@ -181,6 +162,7 @@ Tstatus iostat(){
   return(status);
 }
 
+
 int proberx(){
   extern UARTdriver Ud;
   volatile UARTdriver *Ud_ptr;
@@ -189,6 +171,7 @@ int proberx(){
   
   return( Ud_ptr->nrx );
 }
+
 
 int probetx(){
   extern UARTdriver Ud;
@@ -201,49 +184,51 @@ int probetx(){
 
 
 void Putc(char c){
-  
   extern UARTdriver Ud;
   volatile UARTdriver *Ud_ptr;  
   
   volatile Tserial *uart;
   Tstatus stat;
   Tinterr interr;
-
   
   Ud_ptr = &Ud;
   uart = (void *)IO_UART_ADDR;
-  
-  
-  if((probetx()) == 16){ // a fila de transmissão está vazia
+    
+  if((probetx()) == 16){ // se a fila de transmissão está vazia
     stat = iostat();
     if(stat.txEmpty == 1){ // e txreg está vazio
-      
       disableInterr();
       Ud_ptr->ntx -= 1; // diminui o numero de espaços
       Ud_ptr->tx_tl = (Ud_ptr->tx_tl + 1) % Q_SZ; // aumenta a cauda da lista
       Ud_ptr->tx_q[Ud_ptr->tx_tl] = c; // coloca na fila de transmissão
       enableInterr();
-      
+      //tx_has_started = 1;
       uart->interr.i |= UART_INT_setTX; // provoca interrupção de tx
     }else{
-      
       disableInterr();
       Ud_ptr->ntx -= 1; // diminui o numero de espaços
       Ud_ptr->tx_tl = (Ud_ptr->tx_tl + 1) % Q_SZ; // aumenta a cauda da lista
       Ud_ptr->tx_q[Ud_ptr->tx_tl] = c; // coloca na fila de transmissão
       enableInterr();
-      
     }
+    
+    // if(tx_has_started == 0){
+    //uart->interr.i |= UART_INT_setTX;
+    //}
   }else{
-    
-    disableInterr();
-    Ud_ptr->ntx -= 1; // diminui o numero de espaços
-    Ud_ptr->tx_tl = (Ud_ptr->tx_tl + 1) % Q_SZ; // aumenta a cauda da lista
-    Ud_ptr->tx_q[Ud_ptr->tx_tl] = c; // coloca na fila de transmissão
-    enableInterr();
-    
+    if((probetx()) > 0){
+      disableInterr();
+      Ud_ptr->ntx -= 1; // diminui o numero de espaços
+      Ud_ptr->tx_tl = (Ud_ptr->tx_tl + 1) % Q_SZ; // aumenta a cauda da lista
+      Ud_ptr->tx_q[Ud_ptr->tx_tl] = c; // coloca na fila de transmissão
+      enableInterr();
+    }
   }
+
+  return;
+  
 }
+
 
 char Getc(){
   extern UARTdriver Ud;
@@ -254,11 +239,9 @@ char Getc(){
 
   if(proberx() > 0){    
     disableInterr();// atualização da fila
-
     Ud_ptr->nrx -= 1;
     c = Ud_ptr->rx_q[Ud_ptr->rx_hd];
     Ud_ptr->rx_hd = (Ud_ptr->rx_hd + 1) % Q_SZ;
-    
     enableInterr();
     return c;
 
@@ -270,40 +253,30 @@ char Getc(){
 
 
 void alinha(char *str){
-  char temp[21], c;
-  int i_al, j;
+  char temp[21];
+  int i, j;
 
-  i_al = 0;
-  while(str[i_al] != '\n'){
-    temp[i_al] = str[i_al];
-    i_al += 1;
+  i = 0;
+  while(str[i] != '\n'){
+    temp[i] = str[i];
+    i += 1;
   }
-  temp[i_al] = str[i_al];
+  temp[i] = str[i];
 
   //i == indice de '\n' em temp.
   j = 20;
   while(j >= 0){
-    if(i_al >= 0){
-      str[j] = temp[i_al];
-      i_al -= 1;
-      j -= 1;
-      
+    if(i >= 0){
+      str[j] = temp[i];
+      i -= 1;
     }else{
       str[j] = ' ';
-      j -= 1;
     }
+    j -= 1;
   }
 
   return;
 }
-
-//int *str2int(char *str){
-  //int i, *out[21];
-  //i = 0;
-  //while(){
-    
-    //}
-  //}
 
 
 /* int main (void) {
