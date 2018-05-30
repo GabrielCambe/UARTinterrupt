@@ -14,25 +14,29 @@
 
 
 	# limpando o pipeline
-	#nop
+        nop
+	nop
+	nop
+	nop
+        nop
 
-	
+
 	#------------------------------------------------------------
 	# pegando o endereço do buffer para o salvamento dos registradores
         lui	$k0, %hi(_uart_buff)
-        nop
+        #nop
         ori	$k0, $k0, %lo(_uart_buff)        
         # O SALVAMENTO DOS REGISTRADORES DEVE SER ATOMICO, ENTÃO DEVE-SE INTERROMPER AS INTERRUPÇÕES
         sw $a0, 3*4($k0)
         sw $a1, 4*4($k0)
         sw $a2, 5*4($k0)
         sw $a3, 6*4($k0)
-        sw $v0, 7*4($k0)
-        sw $v1, 8*4($k0)
+        #sw $v0, 7*4($k0)
+        #sw $v1, 8*4($k0)
 
 	# salva o endereço da UART
 	lui	$k1, %hi(HW_uart_addr)
-        nop
+        #nop
         ori	$k1, $k1, %lo(HW_uart_addr)
 
 	# descobrindo a causa da interrupção
@@ -68,7 +72,7 @@ UARTrec:
 
 
         lui    $a0, %hi(Ud) # carregando o endereço da struct Ud
-        nop                       # Ud_ptr = &Ud;
+        #nop                       # Ud_ptr = &Ud;
         ori $a0, $a0, %lo(Ud)
         nop
 
@@ -113,7 +117,7 @@ UARTtra:
 
 
         lui    $a0, %hi(Ud) # carregando o endereço da struct Ud
-        nop                  # Ud_ptr = &Ud;
+        #nop                  # Ud_ptr = &Ud;
         ori $a0, $a0, %lo(Ud)
         nop
 
@@ -166,24 +170,15 @@ _return:
         lw $a1, 4*4($k0)
         lw $a2, 5*4($k0)
         lw $a3, 6*4($k0)
-        lw $v0, 7*4($k0)
-        lw $v1, 8*4($k0)
-	
-
-	eret			    # Return from interrupt
+        #lw $v0, 7*4($k0)
+        #lw $v1, 8*4($k0)
 
 
-################################################################
-#handle <- uart:
-#    lê status da UART e guarda em memória
-#salva contexto
-#
-#se (status.rxInterr == TRUE)
-#trata recepção
-#
-#se (status.txInterr == TRUE)
-#trata transmissão
-#
-#recompõe contexto
-#
-#    eret
+        # limpando o pipeline
+        nop
+	nop
+	nop
+	nop
+        nop
+
+        eret			    # Return from interrupt
